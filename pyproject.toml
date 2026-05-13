@@ -21,8 +21,8 @@ dependencies = [
     "matplotlib>=3.9",
     "plotly>=5.20",
     "requests>=2.31",
-    "statsmodels>=0.14",
     "streamlit>=1.35",
+    "shap>=0.51.0",
 ]
 
 [project.optional-dependencies]
