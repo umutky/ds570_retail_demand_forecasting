@@ -5,7 +5,6 @@ import streamlit as st
 
 from retail_forecast.config import PROCESSED_DATA_DIR
 
-st.set_page_config(page_title="Data Explorer", layout="wide")
 st.title("Data Explorer")
 st.caption("Historical sales from the M5 dataset — CA_1 store, all products.")
 
@@ -24,7 +23,7 @@ df = load_sales()
 df["date"] = pd.to_datetime(df["date"])
 
 
-# ---- Filters ----------------------------------------------------------------
+# Filters
 st.sidebar.header("Filters")
 
 categories = sorted(df["cat_id"].unique().tolist())
@@ -37,14 +36,27 @@ items = sorted(df[df["dept_id"] == selected_dept]["id"].unique().tolist())
 selected_item = st.sidebar.selectbox("Item", items)
 
 
-# ---- Item time series -------------------------------------------------------
+# Item time series
 st.subheader(f"Sales time series — {selected_item}")
 
 item_df = (
     df[df["id"] == selected_item]
     .sort_values("date")
-    [["date", "sales", "event_type_1", "sell_price"]]
+    [["date", "sales", "event_name_1", "event_type_1", "sell_price"]]
 )
+
+EVENT_COLORS = {
+    "Sporting":  "#e377c2",
+    "National":  "#d62728",
+    "Cultural":  "#ff7f0e",
+    "Religious": "#9467bd",
+}
+EVENT_SYMBOLS = {
+    "Sporting":  "star",
+    "National":  "x",
+    "Cultural":  "diamond",
+    "Religious": "cross",
+}
 
 event_rows = item_df[item_df["event_type_1"].notna()]
 
@@ -58,22 +70,26 @@ fig.add_trace(
         line=dict(color="#1f77b4", width=1),
     )
 )
-if not event_rows.empty:
+for etype, color in EVENT_COLORS.items():
+    subset = event_rows[event_rows["event_type_1"] == etype]
+    if subset.empty:
+        continue
     fig.add_trace(
         go.Scatter(
-            x=event_rows["date"],
-            y=event_rows["sales"],
+            x=subset["date"],
+            y=subset["sales"],
             mode="markers",
-            name="Event day",
-            marker=dict(color="red", size=5, symbol="x"),
-            hovertext=event_rows["event_type_1"],
+            name=f"{etype} event",
+            marker=dict(color=color, size=8, symbol=EVENT_SYMBOLS[etype]),
+            hovertext=subset["event_name_1"] if "event_name_1" in subset.columns else etype,
+            hoverinfo="text+x+y",
         )
     )
 fig.update_layout(
     xaxis_title="Date",
     yaxis_title="Units sold",
-    legend=dict(orientation="h", y=1.05),
-    height=320,
+    legend=dict(orientation="h", y=1.08),
+    height=340,
     margin=dict(t=20, b=40),
 )
 st.plotly_chart(fig, use_container_width=True)
@@ -86,7 +102,7 @@ col2.metric("Mean sales (non-zero days)", f"{mean_sales:.2f} units")
 col3.metric("Total days", f"{len(item_df):,}")
 
 
-# ---- Zero-inflation by category/department ----------------------------------
+# Zero-inflation by category/department
 st.divider()
 st.subheader("Zero-inflation rate by category")
 st.caption(
@@ -115,7 +131,7 @@ fig2.update_layout(coloraxis_showscale=False, height=300, margin=dict(t=20, b=40
 st.plotly_chart(fig2, use_container_width=True)
 
 
-# ---- Sales distribution by category ----------------------------------------
+# Sales distribution by category
 st.divider()
 st.subheader("Non-zero sales distribution by category")
 st.caption("Distribution of daily sales volumes on days when at least one unit was sold.")
@@ -135,7 +151,7 @@ fig3.update_layout(height=320, margin=dict(t=20, b=40))
 st.plotly_chart(fig3, use_container_width=True)
 
 
-# ---- Weekly sales pattern ---------------------------------------------------
+# Weekly sales pattern
 st.divider()
 st.subheader("Average daily sales by weekday — all items")
 

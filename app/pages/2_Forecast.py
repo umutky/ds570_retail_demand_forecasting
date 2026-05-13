@@ -5,7 +5,6 @@ import streamlit as st
 
 from retail_forecast.config import PROCESSED_DATA_DIR, REPORTS_DIR
 
-st.set_page_config(page_title="28-Day Forecast", layout="wide")
 st.title("28-Day Demand Forecast")
 st.caption(
     "Recursive forecast using the LightGBM Tweedie model. "
@@ -52,7 +51,7 @@ st.info(
 )
 
 
-# ---- Category-level summary ------------------------------------------------
+# Category-level summary
 st.subheader("Total forecast demand by category")
 st.caption("Sum of predicted daily units across all items in each category over the 28-day window.")
 
@@ -78,7 +77,7 @@ fig_cat.update_layout(showlegend=False, height=320, margin=dict(t=20, b=40))
 st.plotly_chart(fig_cat, use_container_width=True)
 
 
-# ---- Department-level breakdown --------------------------------------------
+# Department-level breakdown                       
 st.divider()
 st.subheader("Forecast by department")
 
@@ -104,7 +103,7 @@ fig_dept.update_layout(height=350, margin=dict(t=20, b=40))
 st.plotly_chart(fig_dept, use_container_width=True)
 
 
-# ---- Item-level forecast ----------------------------------------------------
+# Item-level forecast    
 st.divider()
 st.subheader("Item-level forecast")
 st.caption("Last 90 days of historical sales plus the 28-day forecast.")
@@ -176,7 +175,7 @@ with col2:
     )
 
 
-# ---- Top 20 items by forecast demand ----------------------------------------
+# Top 20 items by forecast demand                     
 st.divider()
 st.subheader("Top 20 items by 28-day forecast demand")
 

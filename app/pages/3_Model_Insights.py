@@ -10,7 +10,6 @@ import streamlit as st
 from retail_forecast.config import MODELS_DIR, REPORTS_DIR
 from retail_forecast.models.lgbm import LGBMForecast
 
-st.set_page_config(page_title="Model Insights", layout="wide")
 st.title("Model Insights")
 st.caption(
     "Feature importance, Tweedie vs Gaussian evaluation, "
@@ -18,7 +17,7 @@ st.caption(
 )
 
 
-# ---- Load helpers -----------------------------------------------------------
+# Load helpers   
 
 @st.cache_resource
 def load_model(name: str) -> LGBMForecast | None:
@@ -50,7 +49,7 @@ def load_latest_tracker(model_label: str) -> dict | None:
         return json.load(f)
 
 
-# ---- Check availability ------------------------------------------------------
+#Check availability                         
 tweedie_model = load_model("tweedie")
 gaussian_model = load_model("gaussian")
 
@@ -59,7 +58,7 @@ if tweedie_model is None:
     st.stop()
 
 
-# ---- Feature importance -----------------------------------------------------
+# Feature importance 
 st.subheader("Feature importance (Tweedie model — gain)")
 st.caption(
     "Gain measures the total improvement in the loss function brought "
@@ -88,7 +87,7 @@ fig_fi.update_layout(
 st.plotly_chart(fig_fi, use_container_width=True)
 
 
-# ---- Tweedie vs Gaussian metrics --------------------------------------------
+# Tweedie vs Gaussian metrics                       
 st.divider()
 st.subheader("Tweedie vs Gaussian — test set metrics")
 st.caption(
@@ -103,59 +102,61 @@ gaussian_data = load_test_predictions("gaussian")
 if tweedie_data is None or gaussian_data is None:
     st.warning("Test predictions not found. Re-run `rf-train` to generate them.")
 else:
-    def compute_metrics(df: pd.DataFrame, pred_col: str = "y_pred") -> dict:
-        y = df["sales"].values
-        p = np.maximum(df[pred_col].values, 0)
-        rmse = float(np.sqrt(np.mean((y - p) ** 2)))
-        mae = float(np.mean(np.abs(y - p)))
-        denom = float(np.sum(np.abs(y)))
-        wmape = float(np.sum(np.abs(y - p)) / denom) if denom > 0 else 0.0
-        return {"RMSE": round(rmse, 4), "MAE": round(mae, 4), "WMAPE": round(wmape, 4)}
+    # Metrics by aggregation level from tracker JSONs           
+    LEVEL_ORDER = ["item", "dept_id", "cat_id", "total"]
+    LEVEL_LABELS = {"item": "Item", "dept_id": "Department", "cat_id": "Category", "total": "Total"}
+    METRICS = ["rmse", "mae", "wmape", "wrmsse"]
+    METRIC_LABELS = {"rmse": "RMSE", "mae": "MAE", "wmape": "WMAPE", "wrmsse": "WRMSSE"}
 
     rows = []
-    for model_name, pred_df in [("Tweedie", tweedie_data), ("Gaussian", gaussian_data)]:
-        overall = compute_metrics(pred_df)
-        overall["Model"] = model_name
-        overall["Category"] = "Overall"
-        rows.append(overall)
-        for cat, grp in pred_df.groupby("cat_id"):
-            m = compute_metrics(grp)
-            m["Model"] = model_name
-            m["Category"] = str(cat)
-            rows.append(m)
+    for model_name in ["Tweedie", "Gaussian"]:
+        tracker_data = load_latest_tracker(f"LGBM_{model_name}")
+        if tracker_data:
+            for lvl, lvl_m in tracker_data.get("metrics", {}).get("test", {}).get("by_level", {}).items():
+                row = {"Model": model_name, "Level": LEVEL_LABELS.get(lvl, lvl)}
+                for metric in METRICS:
+                    if metric in lvl_m:
+                        row[METRIC_LABELS[metric]] = round(lvl_m[metric], 4)
+                rows.append(row)
 
-    metrics_df = pd.DataFrame(rows)[["Model", "Category", "RMSE", "MAE", "WMAPE"]]
-    overall_df = metrics_df[metrics_df["Category"] == "Overall"].set_index("Model")
-    by_cat_df = metrics_df[metrics_df["Category"] != "Overall"]
+    if rows:
+        level_df = pd.DataFrame(rows)
+        level_df["_order"] = level_df["Level"].map(
+            {v: i for i, v in enumerate(LEVEL_LABELS.values())}
+        ).fillna(99)
+        level_df = level_df.sort_values(["Model", "_order"]).drop(columns="_order")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Overall test set**")
-        st.dataframe(overall_df[["RMSE", "MAE", "WMAPE"]], use_container_width=True)
-    with col2:
-        st.markdown("**By category**")
-        st.dataframe(
-            by_cat_df.pivot(index="Category", columns="Model", values="WMAPE").round(4),
-            use_container_width=True,
-        )
-        st.caption("Values shown: WMAPE (lower is better)")
+        # Summary table: pivot so rows=Level, columns=Model×Metric
+        tab1, tab2, tab3, tab4 = st.tabs(["RMSE", "MAE", "WMAPE", "WRMSSE"])
+        for tab, metric_label in zip([tab1, tab2, tab3, tab4], ["RMSE", "MAE", "WMAPE", "WRMSSE"]):
+            with tab:
+                if metric_label in level_df.columns:
+                    pivot = level_df.pivot(index="Level", columns="Model", values=metric_label)
+                    # Sort rows by aggregation level order
+                    ordered = [LEVEL_LABELS[k] for k in LEVEL_ORDER if LEVEL_LABELS[k] in pivot.index]
+                    st.dataframe(pivot.reindex(ordered), use_container_width=True)
 
-    # WMAPE comparison bar chart
-    fig_metrics = px.bar(
-        by_cat_df,
-        x="Category",
-        y="WMAPE",
-        color="Model",
-        barmode="group",
-        labels={"WMAPE": "WMAPE (lower is better)", "Category": "Category"},
-        color_discrete_map={"Tweedie": "#1f77b4", "Gaussian": "#ff7f0e"},
-        text_auto=".3f",
-    )
-    fig_metrics.update_layout(height=320, margin=dict(t=20, b=40))
-    st.plotly_chart(fig_metrics, use_container_width=True)
+                    fig = px.bar(
+                        level_df[level_df["Level"].isin(ordered)],
+                        x="Level",
+                        y=metric_label,
+                        color="Model",
+                        barmode="group",
+                        category_orders={"Level": ordered},
+                        labels={metric_label: f"{metric_label} (lower is better)"},
+                        color_discrete_map={"Tweedie": "#1f77b4", "Gaussian": "#ff7f0e"},
+                        text_auto=".3f",
+                    )
+                    if metric_label == "WRMSSE":
+                        fig.add_hline(y=1.0, line_dash="dash", line_color="gray",
+                                      annotation_text="Naive baseline (1.0)")
+                    fig.update_layout(height=320, margin=dict(t=20, b=40))
+                    st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Re-run `rf-train` to generate metrics data.")
 
 
-# ---- Actual vs Predicted ----------------------------------------------------
+# Actual vs Predicted                           
 st.divider()
 st.subheader("Actual vs predicted — Tweedie model on test set")
 
