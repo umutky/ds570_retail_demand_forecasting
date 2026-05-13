@@ -76,7 +76,7 @@ def train():
                            num_boost_round=model.num_boost_round,
                            early_stopping_rounds=model.early_stopping_rounds)
         tracker.log_training(model)
-        tracker.log_metrics(model, val_df, test_df)
+        tracker.log_metrics(model, train_df, val_df, test_df)
         tracker.log_feature_importance(model.feature_importance)
         tracker.save()
         tracker.print_report()

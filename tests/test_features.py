@@ -16,8 +16,8 @@ from retail_forecast.features import (
 
 @pytest.fixture()
 def sample_df() -> pd.DataFrame:
-    """Minimal long-format DataFrame: 2 items × 30 days."""
-    dates = pd.date_range("2020-01-01", periods=30, freq="D")
+    """Minimal long-format DataFrame: 2 items × 31 days."""
+    dates = pd.date_range("2020-01-01", periods=31, freq="D")
     rng = np.random.default_rng(42)
     rows = []
     for item in ["ITEM_A", "ITEM_B"]:

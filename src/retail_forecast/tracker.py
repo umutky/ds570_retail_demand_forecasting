@@ -8,7 +8,7 @@ Usage:
     tracker.log_data(feat, train_end, val_end)
     tracker.log_params(model.params, num_boost_round=1000)
     tracker.log_training(model)
-    tracker.log_metrics(model, val_df, test_df)
+    tracker.log_metrics(model, train_df, val_df, test_df)
     tracker.log_feature_importance(model.feature_importance)
     tracker.save()
     tracker.print_report()
@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from retail_forecast.config import REPORTS_DIR
-from retail_forecast.evaluate import evaluate
+from retail_forecast.evaluate import evaluate, evaluate_by_level, wrmsse, wrmsse_by_level
 from retail_forecast.features import FEATURE_COLS
 
 RUNS_DIR = REPORTS_DIR / "model_runs"
@@ -147,40 +147,34 @@ class ModelTracker:
     def log_metrics(
         self,
         model,
+        train_df: pd.DataFrame,
         val_df: pd.DataFrame,
         test_df: pd.DataFrame,
-        cat_col: str = "cat_id",
     ) -> "ModelTracker":
-        """Compute RMSE / MAE / WMAPE for val and test (overall + per category)."""
+        """Compute RMSE / MAE / WMAPE / WRMSSE at item, dept, cat, and total levels."""
 
-        def _eval(df: pd.DataFrame) -> dict[str, float]:
-            preds = np.maximum(model.predict(df), 0)
-            return {k: round(v, 6) for k, v in evaluate(df["sales"].values, preds).items()}
+        val_preds  = np.maximum(model.predict(val_df), 0)
+        test_preds = np.maximum(model.predict(test_df), 0)
 
-        val_metrics  = _eval(val_df)
-        test_preds   = np.maximum(model.predict(test_df), 0)
-        test_overall = {
-            k: round(v, 6)
-            for k, v in evaluate(test_df["sales"].values, test_preds).items()
+        # Validation: overall only
+        val_metrics: dict[str, float] = {
+            k: round(v, 6) for k, v in evaluate(val_df["sales"].values, val_preds).items()
         }
+        val_metrics["wrmsse"] = round(wrmsse(train_df, val_df, val_preds), 6)
 
-        by_cat: dict[str, dict[str, float]] = {}
-        if cat_col in test_df.columns:
-            # Reset index so positional boolean indexing into test_preds is safe
-            test_reset = test_df.reset_index(drop=True)
-            for cat in sorted(test_df[cat_col].unique(), key=str):
-                mask = (test_reset[cat_col] == cat).values
-                by_cat[str(cat)] = {
-                    k: round(v, 6)
-                    for k, v in evaluate(
-                        test_reset.loc[mask, "sales"].values,
-                        test_preds[mask],
-                    ).items()
-                }
+        # Test: all metrics at all aggregation levels
+        eval_lvl   = evaluate_by_level(test_df, test_preds)
+        wrmsse_lvl = {k: round(v, 6) for k, v in wrmsse_by_level(train_df, test_df, test_preds).items()}
+
+        test_by_level: dict[str, dict[str, float]] = {}
+        for lvl, metrics in eval_lvl.items():
+            test_by_level[lvl] = dict(metrics)
+            if lvl in wrmsse_lvl:
+                test_by_level[lvl]["wrmsse"] = wrmsse_lvl[lvl]
 
         self._d["metrics"] = {
             "val":  val_metrics,
-            "test": {"overall": test_overall, "by_category": by_cat},
+            "test": {"by_level": test_by_level},
         }
         return self
 
@@ -233,11 +227,9 @@ class ModelTracker:
         row["best_iteration"] = d.get("training", {}).get("best_iteration")
         for metric, val in d.get("metrics", {}).get("val", {}).items():
             row[f"val_{metric}"] = val
-        for metric, val in d.get("metrics", {}).get("test", {}).get("overall", {}).items():
-            row[f"test_{metric}"] = val
-        for cat, m in d.get("metrics", {}).get("test", {}).get("by_category", {}).items():
-            for metric, val in m.items():
-                row[f"test_{cat}_{metric}"] = val
+        for lvl, metrics in d.get("metrics", {}).get("test", {}).get("by_level", {}).items():
+            for metric, val in metrics.items():
+                row[f"test_{lvl}_{metric}"] = val
         fi = d.get("feature_importance", {})
         for i, (feat, pct) in enumerate(list(fi.items())[:5], 1):
             row[f"fi_top{i}"] = f"{feat}={pct:.1f}%"
@@ -301,20 +293,27 @@ class ModelTracker:
         # Metrics
         m = d.get("metrics", {})
         line("METRICS")
-        line(f"  {'':20} {'RMSE':>10} {'MAE':>10} {'WMAPE':>10}")
-        line("  " + "─" * 52)
 
         def mrow(label: str, metrics: dict) -> None:
-            r = metrics.get("rmse", float("nan"))
-            a = metrics.get("mae",  float("nan"))
-            w = metrics.get("wmape", float("nan"))
-            line(f"  {label:<20} {r:>10.4f} {a:>10.4f} {w:>10.4f}")
+            r  = metrics.get("rmse",   float("nan"))
+            a  = metrics.get("mae",    float("nan"))
+            w  = metrics.get("wmape",  float("nan"))
+            wr = metrics.get("wrmsse", float("nan"))
+            wr_str = f"{wr:>10.4f}" if wr == wr else f"{'n/a':>10}"
+            line(f"  {label:<12} {r:>10.4f} {a:>10.4f} {w:>10.4f}{wr_str}")
 
+        # Validation row
+        line(f"  {'':12} {'RMSE':>10} {'MAE':>10} {'WMAPE':>10} {'WRMSSE':>10}")
+        line("  " + "─" * 54)
         mrow("Validation", m.get("val", {}))
-        mrow("Test (overall)", m.get("test", {}).get("overall", {}))
-        line("  " + "─" * 52)
-        for cat, cat_m in m.get("test", {}).get("by_category", {}).items():
-            mrow(f"  {cat}", cat_m)
+        sep()
+
+        # Test by aggregation level
+        line(f"  TEST SET — by aggregation level")
+        line(f"  {'Level':<12} {'RMSE':>10} {'MAE':>10} {'WMAPE':>10} {'WRMSSE':>10}")
+        line("  " + "─" * 54)
+        for lvl, lvl_m in m.get("test", {}).get("by_level", {}).items():
+            mrow(lvl, lvl_m)
         sep()
 
         # Feature importance

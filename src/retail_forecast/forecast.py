@@ -25,6 +25,14 @@ from retail_forecast.features import DATE_COL, FEATURE_COLS, ID_COL, TARGET_COL
 # Python dayofweek:   Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
 _M5_WDAY = [3, 4, 5, 6, 7, 1, 2]
 
+# Derive lag numbers directly from FEATURE_COLS so forecast.py stays in sync
+# with features.py automatically when lags are added or removed.
+_LAG_NUMS: list[int] = sorted(
+    int(c.replace("sales_lag_", ""))
+    for c in FEATURE_COLS
+    if c.startswith("sales_lag_")
+)
+
 
 def forecast_future(
     model,
@@ -115,10 +123,7 @@ def forecast_future(
             d = fdate - pd.Timedelta(days=days)
             return pivot[d].values if d in pivot.columns else np.zeros(n_items)
 
-        lag7   = _lag(7)
-        lag14  = _lag(14)
-        lag28  = _lag(28)
-        lag365 = _lag(365)
+        lag_arrays = {f"sales_lag_{n}": _lag(n) for n in _LAG_NUMS}
 
         # Rolling window: 28 lagged dates, vectorised via column_stack
         roll_cols = [fdate - pd.Timedelta(days=i) for i in range(1, 29)]
@@ -139,11 +144,7 @@ def forecast_future(
                 DATE_COL: fdate,
                 "dept_id": dept_values,
                 "cat_id":  cat_values,
-                # Lag features
-                "sales_lag_7":   lag7,
-                "sales_lag_14":  lag14,
-                "sales_lag_28":  lag28,
-                "sales_lag_365": lag365,
+                **lag_arrays,
                 # Rolling statistics
                 "sales_rolling_mean_7":  rm7,
                 "sales_rolling_mean_28": rm28,

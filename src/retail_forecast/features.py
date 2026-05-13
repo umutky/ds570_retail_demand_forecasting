@@ -18,7 +18,7 @@ def _sort(df: pd.DataFrame) -> pd.DataFrame:
 def add_lag_features(df: pd.DataFrame, lags: list[int] | None = None) -> pd.DataFrame:
     """Add per-item lag features shifted by n days within each item group."""
     if lags is None:
-        lags = [7, 14, 28, 365]
+        lags = [1, 2, 3, 4, 5, 6, 7, 14, 28, 365]
     df = _sort(df)
     for lag in lags:
         df[f"sales_lag_{lag}"] = df.groupby("id")["sales"].shift(lag)
@@ -76,6 +76,7 @@ def add_price_features(df: pd.DataFrame) -> pd.DataFrame:
 
 FEATURE_COLS: list[str] = [
     # Lag features
+    "sales_lag_1", "sales_lag_2", "sales_lag_3", "sales_lag_4", "sales_lag_5", "sales_lag_6",
     "sales_lag_7", "sales_lag_14", "sales_lag_28", "sales_lag_365",
     # Rolling statistics
     "sales_rolling_mean_7", "sales_rolling_mean_28",
