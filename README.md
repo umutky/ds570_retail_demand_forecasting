@@ -14,11 +14,22 @@ loss function handle zero-inflated retail sales better than standard regression.
 
 The only requirement is Docker. No data download, no account, no local setup needed.
 
+### Option A — Pull pre-built image (recommended, skips build step)
+
 ```bash
-# Build the image (~2-3 minutes on first run)
+docker pull umutky/retail-forecast:latest
+
+docker run -p 8501:8501 \
+  -v retail-forecast-data:/app/data \
+  -v retail-forecast-outputs:/app/outputs \
+  umutky/retail-forecast:latest
+```
+
+### Option B — Build from source
+
+```bash
 docker build -t retail-forecast .
 
-# Run the dashboard (data fetch + training happen automatically on first run)
 docker run -p 8501:8501 \
   -v retail-forecast-data:/app/data \
   -v retail-forecast-outputs:/app/outputs \
@@ -44,10 +55,18 @@ are skipped and the dashboard launches in seconds.
 ## Data
 
 **Source:** [M5 Forecasting Accuracy](https://www.kaggle.com/competitions/m5-forecasting-accuracy),
-Makridakis Open Forecasting Center, 2020. Kaggle competition dataset.
+Makridakis Open Forecasting Center, 2020.
 
 > Makridakis, S., Spiliotis, E., & Assimakopoulos, V. (2022). M5 accuracy competition:
 > Results, findings, and conclusions. *International Journal of Forecasting*, 38(4), 1346–1364.
+
+**License / Terms of Use:** The original M5 dataset is provided by Walmart via the Kaggle
+competition platform. This project uses a CA_1 store subset solely for academic and
+educational purposes (DS570 coursework). The subset is redistributed as a GitHub Release
+asset under educational fair use. Original data rights belong to Walmart and the
+Makridakis Open Forecasting Center. If you intend to use this data beyond academic
+purposes, download it directly from the
+[official Kaggle competition page](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
 
 **Subset:** `store_id == 'CA_1'` × all products × all dates
 - 3,049 time series (unique items)

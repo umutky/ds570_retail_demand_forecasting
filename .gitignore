@@ -36,6 +36,8 @@ Thumbs.db
 # Secrets
 .env
 
-# Do not push plan file.
+# Do not push plan/doc files
 DS570 Term Project Plan.md
-# DS570_Proje_Plani_v3.md
+DS570_Proje_Plani_v3.md
+DS 570 Final Project Guidelines.md
+proje_dokumantasyonu.txt
