@@ -353,3 +353,9 @@ uv run pytest
 - **SHAP computation cost:** SHAP values are computed on a 3,000-row sample of the test set at
   dashboard load time (~30 seconds on first open, cached thereafter). Full test set SHAP would
   require pre-computation during training.
+
+---
+
+## Note
+
+The Streamlit dashboard code (`app/`) was developed with AI assistance.
