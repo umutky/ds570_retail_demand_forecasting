@@ -54,7 +54,7 @@ def melt_to_long(
         long = long.merge(calendar_df[keep], on="d", how="left")
         long["date"] = pd.to_datetime(long["date"])
 
-    # Sort by numeric day index — string sort gives d_1, d_10, d_100 which breaks time order
+    # Sort by numeric day index - string sort gives d_1, d_10, d_100 which breaks time order
     long["_day_num"] = long["d"].str[2:].astype(int)
     long = long.sort_values(["id", "_day_num"]).drop(columns=["_day_num"])
     return long.reset_index(drop=True)

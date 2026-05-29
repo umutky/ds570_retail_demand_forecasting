@@ -1,4 +1,4 @@
-"""Smoke tests for feature engineering — leakage checks and column presence."""
+"""Smoke tests for feature engineering - leakage checks and column presence."""
 
 import numpy as np
 import pandas as pd
@@ -69,7 +69,7 @@ class TestLagFeatures:
         df = add_lag_features(sample_df, lags=[1])
         for item_id, grp in df.sort_values("date").groupby("id"):
             grp = grp.reset_index(drop=True)
-            # Row 0 (first day of this item) must be NaN — no prior day within this item
+            # Row 0 (first day of this item) must be NaN - no prior day within this item
             assert np.isnan(grp.iloc[0]["sales_lag_1"])
 
 
@@ -152,7 +152,7 @@ class TestPriceFeatures:
 
 class TestBuildFeatureMatrix:
     def test_drops_lag_nan_rows(self, sample_df: pd.DataFrame) -> None:
-        """With 30 days data, lag_365 is always NaN — build_feature_matrix drops all rows."""
+        """With 30 days data, lag_365 is always NaN - build_feature_matrix drops all rows."""
         fm = build_feature_matrix(sample_df)
         # All rows dropped because lag_365 not available in a 30-day sample
         assert len(fm) == 0

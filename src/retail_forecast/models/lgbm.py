@@ -28,7 +28,7 @@ _DEFAULT_PARAMS: dict[str, Any] = {
 
 
 class LGBMForecast:
-    """Base LightGBM wrapper — subclass to set `objective`."""
+    """Base LightGBM wrapper - subclass to set `objective`."""
 
     objective: str = "regression"
 
@@ -82,7 +82,7 @@ class LGBMForecast:
 
     def predict(self, df: pd.DataFrame) -> np.ndarray:
         if self._booster is None:
-            raise RuntimeError("Model not fitted — call fit() first.")
+            raise RuntimeError("Model not fitted - call fit() first.")
         X, _ = self._prep(df)
         return self._booster.predict(X)
 
@@ -100,7 +100,7 @@ class LGBMForecast:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self, f)
-        print(f"Model saved → {path}")
+        print(f"Model saved -> {path}")
 
     @classmethod
     def load(cls, path: Path) -> "LGBMForecast":
@@ -109,7 +109,7 @@ class LGBMForecast:
 
 
 class LGBMTweedie(LGBMForecast):
-    """LightGBM with Tweedie objective — designed for zero-inflated demand.
+    """LightGBM with Tweedie objective - designed for zero-inflated demand.
 
     Tweedie loss (1 < p < 2) lies between Poisson (p=1) and Gamma (p=2),
     making it well-suited for retail data that is a mix of zeros and positive counts.
@@ -124,7 +124,7 @@ class LGBMTweedie(LGBMForecast):
 
 
 class LGBMGaussian(LGBMForecast):
-    """LightGBM with L2 (Gaussian) objective — comparison baseline.
+    """LightGBM with L2 (Gaussian) objective - comparison baseline.
 
     Standard squared-error regression. Compared against LGBMTweedie on the
     same feature set to quantify the benefit of the Tweedie loss on intermittent demand.

@@ -13,7 +13,7 @@ Usage:
 
 Output:
     data/raw/m5_ca1_subset.parquet   (~50-80 MB, long format with calendar + prices)
-    SHA256 hash printed to stdout — copy this value into config.py DATA_SHA256.
+    SHA256 hash printed to stdout - copy this value into config.py DATA_SHA256.
 
 After running:
     1. Create a GitHub Release tagged v0.1.0-data.

@@ -2104,6 +2104,7 @@ notebooks = [
     { name = "ipykernel" },
     { name = "ipywidgets" },
     { name = "jupyterlab" },
+    { name = "nbformat" },
 ]
 
 [package.metadata]
@@ -2114,6 +2115,7 @@ requires-dist = [
     { name = "jupyterlab", marker = "extra == 'notebooks'" },
     { name = "lightgbm", specifier = ">=4.3" },
     { name = "matplotlib", specifier = ">=3.9" },
+    { name = "nbformat", marker = "extra == 'notebooks'", specifier = ">=5.10.4" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "plotly", specifier = ">=5.20" },

@@ -8,7 +8,7 @@ SALES_LONG_PATH=/app/data/processed/sales_long.parquet
 if [ ! -f "$MODEL_PATH" ]; then
     echo "First run: setting up data and models..."
 
-    # Step 1: Download raw CA_1 subset (~60 MB)
+    # Step 1: Download raw CA_1 subset (~22 MB)
     rf-fetch
 
     # Step 2: Build sales_long.parquet (fast, needed by rf-predict & forecast)

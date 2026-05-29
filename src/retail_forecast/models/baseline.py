@@ -73,7 +73,7 @@ class MovingAverage:
 class ZeroForecast:
     """Trivial lower bound: always predict zero.
 
-    Useful for measuring how much a model improves over doing nothing —
+    Useful for measuring how much a model improves over doing nothing -
     particularly revealing in high-intermittency categories (HOBBIES).
     """
 

@@ -36,6 +36,7 @@ notebooks = [
     "jupyterlab",
     "ipykernel",
     "ipywidgets",
+    "nbformat>=5.10.4",
 ]
 
 [project.scripts]

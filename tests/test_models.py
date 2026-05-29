@@ -12,7 +12,7 @@ from retail_forecast.models.lgbm import LGBMGaussian, LGBMTweedie
 
 @pytest.fixture()
 def two_item_400d() -> pd.DataFrame:
-    """400-day two-item dataset — long enough for lag_365 features to exist."""
+    """400-day two-item dataset - long enough for lag_365 features to exist."""
     dates = pd.date_range("2019-01-01", periods=400, freq="D")
     rng = np.random.default_rng(0)
     rows = []
@@ -49,7 +49,7 @@ class TestMetrics:
     def test_wmape_nonzero(self) -> None:
         y_true = np.array([2.0, 4.0])
         y_pred = np.array([1.0, 3.0])
-        # |2-1| + |4-3| = 2; sum(|y_true|) = 6 → WMAPE = 2/6 ≈ 0.333
+        # |2-1| + |4-3| = 2; sum(|y_true|) = 6 -> WMAPE = 2/6 ≈ 0.333
         assert wmape(y_true, y_pred) == pytest.approx(2 / 6, rel=1e-6)
 
     def test_evaluate_clips_negatives(self) -> None:
@@ -117,7 +117,7 @@ class TestZeroForecast:
 def feature_matrix(two_item_400d: pd.DataFrame) -> pd.DataFrame:
     fm = build_feature_matrix(two_item_400d)
     if len(fm) == 0:
-        pytest.skip("Feature matrix empty — dataset too short for lag_365.")
+        pytest.skip("Feature matrix empty - dataset too short for lag_365.")
     return fm
 
 

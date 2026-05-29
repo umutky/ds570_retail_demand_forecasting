@@ -39,8 +39,8 @@ docker run -p 8501:8501 \
 Then open [http://localhost:8501](http://localhost:8501) in your browser.
 
 On first run the container will:
-1. Download the CA_1 subset (~60 MB) from GitHub Releases
-2. Download the pre-built feature matrix (~80 MB) from GitHub Releases — skips ~8 min of local computation
+1. Download the CA_1 subset (~22 MB) from GitHub Releases
+2. Download the pre-built feature matrix (~76 MB) from GitHub Releases - skips ~8 min of local computation
 3. Train both Tweedie and Gaussian LightGBM models (~3 minutes)
 4. Generate the 28-day demand forecast
 5. Launch the Streamlit dashboard
@@ -159,9 +159,9 @@ Key findings:
 ### Train / validation / test split
 
 Data is split chronologically (no shuffling):
-- **Train:** 2011-01-29 to 2015-04-30 (~80%)
-- **Validation:** 2015-05-01 to 2015-11-10 (~10%) — used for early stopping only
-- **Test:** 2015-11-11 to 2016-05-22 (~10%) — held out, never seen during training
+- **Train:** 2012-01-29 to 2015-07-12 (~80%)
+- **Validation:** 2015-07-12 to 2015-12-17 (~10%) — used for early stopping only
+- **Test:** 2015-12-17 to 2016-05-22 (~10%) — held out, never seen during training
 
 ### Evaluation metrics
 
@@ -358,4 +358,4 @@ uv run pytest
 
 ## Note
 
-The Streamlit dashboard code (`app/`) was developed with AI assistance.
+The Streamlit dashboard code was developed with AI assistance.
