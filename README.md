@@ -1,11 +1,11 @@
 # Retail Demand Forecasting
 
 End-to-end retail demand forecasting pipeline built on the M5 Accuracy Competition dataset.
-This is my DS570 final project — an attempt to show how gradient-boosted trees with a Tweedie
+This is my DS570 final project - an attempt to show how gradient-boosted trees with a Tweedie
 loss function handle zero-inflated retail sales better than standard regression.
 
 **Scope:** CA_1 store × 3,049 products × 3 categories (HOBBIES, HOUSEHOLD, FOODS)  
-**Model:** LightGBM — Tweedie objective vs. Gaussian (L2) comparison  
+**Model:** LightGBM - Tweedie objective vs. Gaussian (L2) comparison  
 **Dashboard:** Interactive Streamlit app with data exploration, 28-day forecast, model insights, and SHAP analysis
 
 ---
@@ -14,7 +14,7 @@ loss function handle zero-inflated retail sales better than standard regression.
 
 The only requirement is Docker. No data download, no account, no local setup needed.
 
-### Option A — Pull pre-built image (recommended, skips build step)
+### Option A - Pull pre-built image (recommended, skips build step)
 
 ```bash
 docker pull umutky/retail-forecast:latest
@@ -25,7 +25,7 @@ docker run -p 8501:8501 \
   umutky/retail-forecast:latest
 ```
 
-### Option B — Build from source
+### Option B - Build from source
 
 ```bash
 docker build -t retail-forecast .
@@ -71,16 +71,13 @@ purposes, download it directly from the
 **Subset:** `store_id == 'CA_1'` × all products × all dates
 - 3,049 time series (unique items)
 - 3 categories: HOBBIES, HOUSEHOLD, FOODS (7 departments)
-- 1,941 days (2011-01-29 to 2016-06-19)
+- 1,941 days (2011-01-29 to 2016-05-22)
 - ~5.9M rows in long format
 
-**Why CA_1?** I ran a comparative EDA across all 10 M5 stores first
-(see `notebooks/2026-04-22-uk-01-eda-global.ipynb`). CA_1 was selected because it has
-good data completeness across all three categories, a representative range of zero-inflation
-rates (56–73% depending on category), and a size that fits comfortably within the
-5-minute Docker build+run budget. Focusing on a single store also keeps the intermittency
-analysis clean — cross-store heterogeneity does not muddy the category-level comparison
-that is the core novelty of this project.
+**Why CA_1?** Including all 10 M5 stores would produce ~59M rows and may require 60+ minutes
+of training - incompatible with the Docker time budget. CA_1 was selected as a
+representative high-volume store to keep the pipeline fast while still covering all three
+product categories (HOBBIES, HOUSEHOLD, FOODS).
 
 **Runtime fetch:** The raw subset and the pre-built feature matrix are both hosted as
 [GitHub Release assets](https://github.com/umutky/ds570-term-project/releases/tag/v0.1.0-data).
@@ -99,7 +96,7 @@ uv run rf-process   # rebuilds sales_long.parquet and feature_matrix.parquet
 ### The problem: zero-inflated demand
 
 Retail sales data is full of zeros. In the CA_1 subset, roughly 64% of all daily
-item-level sales are zero — ~72% in HOBBIES, ~68% in HOUSEHOLD, and ~56% in FOODS.
+item-level sales are zero - ~73% in HOBBIES, ~68% in HOUSEHOLD, and ~57% in FOODS.
 Standard L2 (Gaussian) regression minimizes squared error, which pulls predicted values
 toward the mean and systematically over-predicts zero-demand days. The Tweedie distribution
 is a better fit for this kind of count data: it assigns explicit probability mass to zero
@@ -113,7 +110,7 @@ Three naive benchmarks are implemented in `src/retail_forecast/models/baseline.p
 |---|---|
 | **Seasonal Naive** | Repeat the same weekday from the previous week |
 | **Moving Average** | 28-day trailing mean |
-| **Zero Forecast** | Always predict 0 — a surprisingly competitive lower bound given ~64% zero rate |
+| **Zero Forecast** | Always predict 0 - a surprisingly competitive lower bound given ~64% zero rate |
 
 All three are evaluated against LightGBM on the same holdout period.
 
@@ -121,8 +118,8 @@ All three are evaluated against LightGBM on the same holdout period.
 
 Two LightGBM models are trained with identical hyperparameters, differing only in objective:
 
-- **Tweedie** (`objective: tweedie`, `tweedie_variance_power: 1.1`) — the main model
-- **Gaussian** (`objective: regression`) — comparison baseline
+- **Tweedie** (`objective: tweedie`, `tweedie_variance_power: 1.1`) - the main model
+- **Gaussian** (`objective: regression`) - comparison baseline
 
 Features are built in `src/retail_forecast/features.py` across eight families (**37 features total**):
 
@@ -137,8 +134,7 @@ Features are built in `src/retail_forecast/features.py` across eight families (*
 | Price | `sell_price`, `price_change_pct`, `price_rel_year` | 3 | Demand elasticity |
 | Categorical | `dept_id`, `cat_id` | 2 | Hierarchical grouping (LightGBM native category) |
 
-All lag and rolling features use `shift(1)` or greater — no future information leaks into
-the feature matrix.
+No future information leaks into the feature matrix.
 
 ### SHAP analysis
 
@@ -147,30 +143,30 @@ Unlike gain-based feature importance, SHAP values are direction-aware: they show
 feature pushed a specific prediction up or down and by how much.
 
 Key findings:
-- **`sell_price`** is the #1 driver for Tweedie — higher-priced items tend to have fewer
+- **`sell_price`** is the #1 driver for Tweedie - higher-priced items tend to have fewer
   but larger sales events, which aligns with the Tweedie distribution's structure.
-- **`zero_streak`** is the #2 driver — consecutive zero-sales days strongly suppresses
+- **`zero_streak`** is the #2 driver - consecutive zero-sales days strongly suppresses
   next-day predicted demand.
 - **`sales_rolling_mean_14`** captures recent momentum and is consistently in the top-3
   for both models.
 - Gaussian weights recent rolling averages (`rolling_mean_7`) more heavily, while Tweedie
-  leans on intermittency signals — this reflects the difference in loss function geometry.
+  leans on intermittency signals - this reflects the difference in loss function geometry.
 
 ### Train / validation / test split
 
 Data is split chronologically (no shuffling):
 - **Train:** 2012-01-29 to 2015-07-12 (~80%)
-- **Validation:** 2015-07-12 to 2015-12-17 (~10%) — used for early stopping only
-- **Test:** 2015-12-17 to 2016-05-22 (~10%) — held out, never seen during training
+- **Validation:** 2015-07-12 to 2015-12-17 (~10%) - used for early stopping only
+- **Test:** 2015-12-17 to 2016-05-22 (~10%) - held out, never seen during training
 
 ### Evaluation metrics
 
 | Metric | Description |
 |---|---|
-| **RMSE** | Root Mean Squared Error — penalizes large errors heavily |
-| **MAE** | Mean Absolute Error — interpretable in units (daily item sales) |
-| **WMAPE** | Weighted MAE / total sales — avoids undefined MAPE on zero-sales days |
-| **WRMSSE** | Weighted RMSE Scaled Score — the official M5 competition metric; evaluated at item, department, category, and total store level |
+| **RMSE** | Root Mean Squared Error - penalizes large errors heavily |
+| **MAE** | Mean Absolute Error - interpretable in units (daily item sales) |
+| **WMAPE** | Weighted MAE / total sales - avoids undefined MAPE on zero-sales days |
+| **WRMSSE** | Weighted RMSE Scaled Score - the official M5 competition metric; evaluated at item, department, category, and total store level |
 
 ---
 
@@ -195,7 +191,7 @@ but compounds at higher aggregation levels.
 | Category | 0.4063 | 0.4793 | +0.073 |
 | **Total store** | **0.3394** | **0.4185** | **+0.079** |
 
-The Tweedie advantage grows with aggregation — at total store level WRMSSE improves by 0.079.
+The Tweedie advantage grows with aggregation - at total store level WRMSSE improves by 0.079.
 This is consistent with the theoretical expectation: Tweedie's better handling of zeros and
 the heavy tail reduces systematic bias, and that bias cancellation compounds when summing
 across all items.
@@ -204,11 +200,11 @@ across all items.
 
 | Category | Zero rate | RMSE | MAE | WMAPE |
 |---|---|---|---|---|
-| FOODS | ~56% | 2.284 | 1.252 | 61.6% |
-| HOUSEHOLD | ~68% | 1.254 | 0.730 | 77.9% |
-| HOBBIES | ~72% | 2.192 | 0.893 | 95.0% |
+| FOODS | ~57% | 2.273 | 1.242 | 61.1% |
+| HOUSEHOLD | ~68% | 1.248 | 0.725 | 77.4% |
+| HOBBIES | ~73% | 2.184 | 0.887 | 94.3% |
 
-HOBBIES shows the highest WMAPE — items in this category are highly intermittent
+HOBBIES shows the highest WMAPE - items in this category are highly intermittent
 (many zero-sales days punctuated by occasional bursts), which makes any point forecast
 inherently uncertain. FOODS, with the lowest zero rate, is the most predictable category.
 
@@ -230,10 +226,7 @@ The Streamlit app has five pages:
 
 ## Design Decisions
 
-**LightGBM over deep learning:** The M5 competition winners used gradient-boosted trees,
-not neural networks. For tabular time-series data with hand-crafted lag features, LightGBM
-is faster to train, easier to interpret via SHAP, and does not require GPU resources.
-Given the 5-minute Docker constraint, this was also the practical choice.
+**LightGBM over deep learning:** For tabular time-series data with hand-crafted lag features, LightGBM is faster to train, easier to interpret via SHAP, and does not require GPU resources.
 
 **Tweedie objective:** Tweedie loss is the correct statistical choice for zero-inflated
 non-negative count data. The variance power parameter `p = 1.1` keeps the model close
@@ -334,16 +327,16 @@ uv run pytest
 ## Limitations & Future Work
 
 - **CA_1 focus:** The model is trained and evaluated on the CA_1 store only. The pipeline
-  is store-agnostic — repointing `DATA_URL` in `config.py` to a different store's subset
+  is store-agnostic - repointing `DATA_URL` in `config.py` to a different store's subset
   and rerunning `rf-fetch → rf-process → rf-train → rf-predict` applies the same methodology
   to any M5 store.
 - **Recursive forecast error accumulation:** The 28-day forecast is generated step-by-step:
   each day's prediction is fed back as a lag feature for the next day. Errors compound over
-  the horizon — day-28 forecasts build on 27 prior predictions rather than observed sales.
+  the horizon - day-28 forecasts build on 27 prior predictions rather than observed sales.
   Short-lag features (lag_1, lag_7) are affected most; lag_28 and lag_365 always draw from
   historical data within the 28-day horizon.
 - **Cold-start items:** Items with very few historical sales have sparse lag features. The model
-  tends to underfit these — a known weakness of lag-based approaches.
+  tends to underfit these - a known weakness of lag-based approaches.
 - **Rare events:** Events like Super Bowl or Christmas appear very few times in the training data.
   The model learns an average effect but cannot capture how an unusual edition of the event
   might shift demand differently.
@@ -351,8 +344,7 @@ uv run pytest
   (e.g., quantile regression with `objective: quantile`) would make uncertainty explicit and
   would be a natural next step.
 - **SHAP computation cost:** SHAP values are computed on a 3,000-row sample of the test set at
-  dashboard load time (~30 seconds on first open, cached thereafter). Full test set SHAP would
-  require pre-computation during training.
+  dashboard load time (~30 seconds on first open). Full test set SHAP would require pre-computation during training.
 
 ---
 
