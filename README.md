@@ -80,7 +80,7 @@ representative high-volume store to keep the pipeline fast while still covering 
 product categories (HOBBIES, HOUSEHOLD, FOODS).
 
 **Runtime fetch:** The raw subset and the pre-built feature matrix are both hosted as
-[GitHub Release assets](https://github.com/umutky/ds570-term-project/releases/tag/v0.1.0-data).
+[GitHub Release assets](https://github.com/umutky/ds570_retail_demand_forecasting/releases/tag/v0.1.0-data).
 Both are downloaded automatically on first Docker run. No Kaggle account needed.
 
 **Reproducibility:** To rebuild the subset and feature matrix from scratch:
