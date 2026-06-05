@@ -347,7 +347,3 @@ uv run pytest
   dashboard load time (~30 seconds on first open). Full test set SHAP would require pre-computation during training.
 
 ---
-
-## Note
-
-The Streamlit dashboard code was developed with AI assistance.
